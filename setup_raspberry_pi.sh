@@ -221,14 +221,18 @@ BACKEND_SERVICE="/etc/systemd/system/smartclassroom-backend.service"
 sudo bash -c "cat << EOF > $BACKEND_SERVICE
 [Unit]
 Description=Smart Classroom FastAPI Backend Service
-After=network.target
+# Wajib tunggu jaringan/Wi-Fi benar-benar online DAN Docker database sudah aktif
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
 Type=simple
 User=$CURRENT_USER
 WorkingDirectory=$PROJECT_DIR/backend
 Environment=PATH=$PROJECT_DIR/backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-ExecStart=$PROJECT_DIR/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 4
+# Jeda 25 detik saat boot agar Raspberry Pi tenang, SSH siap, dan DB PostgreSQL warm-up
+ExecStartPre=/bin/sleep 25
+ExecStart=$PROJECT_DIR/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
 Restart=always
 RestartSec=5
 
@@ -241,13 +245,17 @@ FRONTEND_SERVICE="/etc/systemd/system/smartclassroom-frontend.service"
 sudo bash -c "cat << EOF > $FRONTEND_SERVICE
 [Unit]
 Description=Smart Classroom Next.js Frontend Service
-After=network.target
+# Tunggu jaringan online dan backend sudah mulai jalan
+After=network-online.target smartclassroom-backend.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=$CURRENT_USER
 WorkingDirectory=$PROJECT_DIR/frontend
 Environment=PATH=/usr/bin:/usr/local/bin:$PROJECT_DIR/frontend/node_modules/.bin
+# Jeda 30 detik agar backend dan database siap terlebih dahulu
+ExecStartPre=/bin/sleep 30
 ExecStart=/usr/bin/npm run start -- -p 3000
 Restart=always
 RestartSec=5
