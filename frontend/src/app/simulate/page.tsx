@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import SimulateView from "@/components/views/SimulateView";
 
 export const metadata: Metadata = {
-  title: "Live Simulation",
-  description: "Test real-time face recognition against the door lock using the laptop webcam.",
+  title: "Simulasi Kamera Pintu",
+  description: "Uji coba pengenalan wajah real-time pada smart door lock menggunakan kamera laptop.",
 };
 
 export default function SimulatePage() {

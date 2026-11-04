@@ -1,3 +1,7 @@
+"use client";
+
+import Icon from "@/components/Icon";
+
 export default function StatusBadge({
   status,
   reason,
@@ -5,26 +9,58 @@ export default function StatusBadge({
   status: string;
   reason?: string | null;
 }) {
-  const isTailgating = status === "tailgating" || (reason && reason.toLowerCase().includes("tailgating"));
-  const granted = status === "success";
+  const normalized = (status || "").toLowerCase();
+  const reasonText = (reason || "").toLowerCase();
 
-  if (isTailgating) {
+  if (normalized === "tailgating" || normalized === "multi_face" || reasonText.includes("tailgating") || reasonText.includes("multi-orang")) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-        Tailgating
+      <span className="chip border-purple-200 bg-purple-50 font-semibold text-purple-800">
+        <Icon name="alertTriangle" className="h-3.5 w-3.5 text-purple-600" />
+        Deteksi Multi-Orang
       </span>
     );
   }
 
+  if (normalized === "out_of_schedule" || reasonText.includes("jadwal perkuliahan")) {
+    return (
+      <span className="chip border-amber-200 bg-amber-50 font-semibold text-amber-800">
+        <Icon name="clock" className="h-3.5 w-3.5 text-amber-600" />
+        Di Luar Jadwal
+      </span>
+    );
+  }
+
+  if (normalized === "no_face" || reasonText.includes("tidak ada wajah") || reasonText.includes("wajah tidak terdeteksi")) {
+    return (
+      <span className="chip border-slate-200 bg-slate-100 font-medium text-slate-700">
+        <Icon name="camera" className="h-3.5 w-3.5 text-slate-500" />
+        Wajah Tidak Terdeteksi
+      </span>
+    );
+  }
+
+  if (normalized === "unregistered" || normalized === "invalid" || reasonText.includes("belum terdaftar") || reasonText.includes("tidak terdaftar")) {
+    return (
+      <span className="chip border-red-200 bg-red-50 font-semibold text-red-700">
+        <Icon name="x" className="h-3.5 w-3.5 text-red-600" />
+        Belum Terdaftar
+      </span>
+    );
+  }
+
+  const granted = normalized === "success";
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-        granted ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"
+      className={`chip ${
+        granted
+          ? "border-mint-100 bg-mint-50 font-semibold text-mint-700"
+          : "border-red-200 bg-red-50 font-medium text-red-700"
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${granted ? "bg-emerald-500" : "bg-red-500"}`} />
-      {granted ? "Granted" : "Denied"}
+      <Icon name={granted ? "check" : "x"} className="h-3.5 w-3.5" />
+      {granted ? "Diizinkan" : "Ditolak"}
     </span>
   );
 }
+

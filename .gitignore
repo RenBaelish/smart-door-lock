@@ -5,6 +5,9 @@
 facelock.db
 backend/.env
 frontend/.env.local
+backend/captures/
+captures/
+backup_data.sql
 
 # Python
 **/__pycache__/
