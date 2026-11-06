@@ -25,6 +25,7 @@ export default function RegisterView() {
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [captured, setCaptured] = useState<Captured | null>(null);
+  const [isUploadedFile, setIsUploadedFile] = useState(false);
 
   // Selected User state (linking to existing user)
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
@@ -130,6 +131,20 @@ export default function RegisterView() {
       return;
     }
     setCaptured({ blob: frame.blob, url: URL.createObjectURL(frame.blob) });
+    setIsUploadedFile(false);
+    setCameraOn(false);
+    setNotice(null);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setNotice({ type: "error", text: "File yang dipilih harus berupa format gambar foto (JPG, PNG, WebP)." });
+      return;
+    }
+    setCaptured({ blob: file, url: URL.createObjectURL(file) });
+    setIsUploadedFile(true);
     setCameraOn(false);
     setNotice(null);
   };
@@ -137,6 +152,7 @@ export default function RegisterView() {
   const handleRetake = () => {
     setCaptured(null);
     setCameraOn(true);
+    setIsUploadedFile(false);
     setNotice(null);
   };
 
@@ -287,7 +303,7 @@ export default function RegisterView() {
                   src={captured.url}
                   alt="Pratinjau foto wajah"
                   className="absolute inset-0 h-full w-full rounded-md bg-slate-950 object-contain shadow-inner"
-                  style={{ transform: "scaleX(-1)" }}
+                  style={{ transform: isUploadedFile ? "none" : "scaleX(-1)" }}
                 />
               )}
             </div>
@@ -304,6 +320,22 @@ export default function RegisterView() {
                   Nyalakan Kamera
                 </button>
               )}
+
+              <label
+                className="btn btn-secondary cursor-pointer inline-flex items-center gap-2"
+                title="Pilih file foto dari galeri perangkat atau jepret langsung via kamera HP"
+              >
+                <Icon name="upload" className="h-4 w-4" />
+                Upload Foto / Galeri
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={submitting}
+                />
+              </label>
 
               {!captured && cameraOn && (
                 <>

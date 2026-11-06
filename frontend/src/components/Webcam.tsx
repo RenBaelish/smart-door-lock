@@ -106,7 +106,7 @@ const Webcam = forwardRef<WebcamHandle, WebcamProps>(function Webcam(
 
     (async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
-        fail("Camera API unavailable. Open the app via http://localhost or HTTPS.");
+        fail("Kamera web dinonaktifkan oleh browser karena halaman dibuka via HTTP IP (bukan localhost/HTTPS). Silakan gunakan tombol 'Upload Foto / Galeri' atau izinkan IP di chrome://flags/#unsafely-treat-insecure-origin-as-secure.");
         return;
       }
       try {
