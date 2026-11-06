@@ -37,50 +37,28 @@ function describeError(err: unknown): string {
   if (err instanceof DOMException) {
     switch (err.name) {
       case "NotAllowedError":
-        return "Camera permission was denied. Allow camera access in the browser settings.";
+        return "Izin kamera ditolak. Berikan izin akses kamera pada pengaturan browser.";
       case "NotFoundError":
-        return "No camera device was found.";
+        return "Perangkat kamera tidak ditemukan.";
       case "NotReadableError":
-        return "The camera is already in use by another application.";
+        return "Kamera sedang digunakan oleh aplikasi lain.";
       default:
-        return `Camera error: ${err.message}`;
+        return `Kesalahan kamera: ${err.message}`;
     }
   }
-  return "Unable to start the camera.";
+  return "Tidak dapat memulai kamera.";
 }
 
 const Webcam = forwardRef<WebcamHandle, WebcamProps>(function Webcam(
-  { active, mirrored = true, onReadyChange, onError, inactiveLabel = "Camera is off", children },
+  { active, mirrored = true, onReadyChange, onError, inactiveLabel = "Kamera mati", children },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const espImgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const callbacks = useRef({ onReadyChange, onError });
 
-  const [cameraSource, setCameraSource] = useState<"local" | "esp32">("local");
-  const [espIp, setEspIp] = useState("http://192.168.43.120/stream");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("esp32_cam_url");
-    if (saved) setEspIp(saved);
-    const savedSource = localStorage.getItem("camera_source") as "local" | "esp32";
-    if (savedSource === "esp32" || savedSource === "local") setCameraSource(savedSource);
-  }, []);
-
-  const handleSourceChange = (src: "local" | "esp32") => {
-    setCameraSource(src);
-    localStorage.setItem("camera_source", src);
-    setReady(false);
-    setError(null);
-  };
-
-  const handleIpChange = (url: string) => {
-    setEspIp(url);
-    localStorage.setItem("esp32_cam_url", url);
-  };
 
   useEffect(() => {
     callbacks.current = { onReadyChange, onError };
@@ -90,9 +68,9 @@ const Webcam = forwardRef<WebcamHandle, WebcamProps>(function Webcam(
     callbacks.current.onReadyChange?.(ready);
   }, [ready]);
 
-  // Handle local camera stream
+  // Handle device camera stream (laptop / smartphone)
   useEffect(() => {
-    if (!active || cameraSource !== "local") return;
+    if (!active) return;
 
     const video = videoRef.current;
     let stream: MediaStream | null = null;
@@ -133,7 +111,7 @@ const Webcam = forwardRef<WebcamHandle, WebcamProps>(function Webcam(
       if (video) video.srcObject = null;
       setReady(false);
     };
-  }, [active, cameraSource]);
+  }, [active]);
 
   // Expose capture method
   useImperativeHandle(
@@ -149,119 +127,38 @@ const Webcam = forwardRef<WebcamHandle, WebcamProps>(function Webcam(
             return;
           }
 
-          if (cameraSource === "local") {
-            const video = videoRef.current;
-            if (!video || video.readyState < 2 || !video.videoWidth) {
-              resolve(null);
-              return;
-            }
-            const scale = Math.min(1, maxWidth / video.videoWidth);
-            const width = Math.round(video.videoWidth * scale);
-            const height = Math.round(video.videoHeight * scale);
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(video, 0, 0, width, height);
-            canvas.toBlob((blob) => resolve(blob ? { blob, width, height } : null), "image/jpeg", quality);
-          } else {
-            // ESP32-CAM stream image
-            const img = espImgRef.current;
-            if (!img || !img.naturalWidth || !img.naturalHeight) {
-              resolve(null);
-              return;
-            }
-            const scale = Math.min(1, maxWidth / img.naturalWidth);
-            const width = Math.round(img.naturalWidth * scale);
-            const height = Math.round(img.naturalHeight * scale);
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob((blob) => resolve(blob ? { blob, width, height } : null), "image/jpeg", quality);
+          const video = videoRef.current;
+          if (!video || video.readyState < 2 || !video.videoWidth) {
+            resolve(null);
+            return;
           }
+          const scale = Math.min(1, maxWidth / video.videoWidth);
+          const width = Math.round(video.videoWidth * scale);
+          const height = Math.round(video.videoHeight * scale);
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(video, 0, 0, width, height);
+          canvas.toBlob((blob) => resolve(blob ? { blob, width, height } : null), "image/jpeg", quality);
         }),
     }),
-    [cameraSource],
+    [],
   );
 
   const showPlaceholder = !active || !ready;
 
   return (
     <div className="w-full space-y-3">
-      {/* Source Selector Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
-        <div className="flex items-center gap-1.5 font-medium text-slate-700">
-          <Icon name="camera" className="h-4 w-4 text-slate-500" />
-          <span>Camera Source:</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => handleSourceChange("local")}
-            className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1 font-medium transition-colors ${
-              cameraSource === "local"
-                ? "bg-neutral-950 text-white shadow-sm"
-                : "border border-primary-200 bg-white text-neutral-800 hover:bg-primary-50"
-            }`}
-          >
-            <Icon name="laptop" className="h-3.5 w-3.5" />
-            Laptop
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSourceChange("esp32")}
-            className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1 font-medium transition-colors ${
-              cameraSource === "esp32"
-                ? "bg-neutral-950 text-white shadow-sm"
-                : "border border-primary-200 bg-white text-neutral-800 hover:bg-primary-50"
-            }`}
-          >
-            <Icon name="camera" className="h-3.5 w-3.5" />
-            ESP32-CAM
-          </button>
-        </div>
-      </div>
-
-      {cameraSource === "esp32" && (
-        <div className="flex items-center gap-2 rounded-lg border border-primary-200 bg-white p-2.5 text-xs">
-          <span className="shrink-0 font-medium text-neutral-700">Stream URL:</span>
-          <input
-            type="text"
-            value={espIp}
-            onChange={(e) => handleIpChange(e.target.value)}
-            placeholder="http://192.168.30.2:81/stream"
-            className="w-full rounded-sm border border-primary-200 px-2.5 py-1 font-mono text-xs text-neutral-900 focus:border-secondary-500 focus:outline-none"
-          />
-        </div>
-      )}
-
       {/* Video Viewport */}
-      <div className={`relative w-full overflow-hidden rounded-lg bg-slate-950 aspect-[4/3] max-h-[460px] flex items-center justify-center`}>
-        {cameraSource === "local" ? (
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            onLoadedMetadata={() => setReady(true)}
-            className={showPlaceholder ? "absolute inset-0 h-full w-full opacity-0" : "block h-full w-full object-contain"}
-            style={mirrored ? { transform: "scaleX(-1)" } : undefined}
-          />
-        ) : (
-          /* ESP32-CAM MJPEG Stream */
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            ref={espImgRef}
-            src={active ? espIp : undefined}
-            crossOrigin="anonymous"
-            alt="ESP32-CAM Live Stream"
-            onLoad={() => setReady(true)}
-            onError={() => {
-              setReady(false);
-              setError(`Gagal memuat stream dari ${espIp}. Pastikan ESP32-CAM menyala dan satu WiFi.`);
-            }}
-            className={showPlaceholder ? "absolute inset-0 h-full w-full opacity-0" : "block h-full w-full object-contain"}
-          />
-        )}
+      <div className="relative w-full overflow-hidden rounded-lg bg-slate-950 aspect-[4/3] max-h-[460px] flex items-center justify-center">
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          onLoadedMetadata={() => setReady(true)}
+          className={showPlaceholder ? "absolute inset-0 h-full w-full opacity-0" : "block h-full w-full object-contain"}
+          style={mirrored ? { transform: "scaleX(-1)" } : undefined}
+        />
 
         {active && ready && children && <div className="pointer-events-none absolute inset-0">{children}</div>}
 
@@ -271,14 +168,10 @@ const Webcam = forwardRef<WebcamHandle, WebcamProps>(function Webcam(
               <Icon name="camera" className="h-6 w-6" />
             </div>
             {error ? (
-              <p className="max-w-sm text-sm text-red-300">{error}</p>
+              <p className="max-w-sm text-xs leading-relaxed text-red-300">{error}</p>
             ) : (
               <p className="text-sm text-slate-400">
-                {active
-                  ? cameraSource === "esp32"
-                    ? `Menghubungkan ke ${espIp}...`
-                    : "Starting camera..."
-                  : inactiveLabel}
+                {active ? "Memulai kamera..." : inactiveLabel}
               </p>
             )}
           </div>

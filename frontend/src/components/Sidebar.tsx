@@ -21,7 +21,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Manajemen Pengguna",
     items: [
-      { href: "/users", label: "Data Pengguna (Admin)", icon: "key" },
+      // { href: "/users", label: "Data Pengguna (Admin)", icon: "key" },
       { href: "/mahasiswa", label: "Data Mahasiswa", icon: "academicCap" },
       { href: "/dosen", label: "Data Dosen", icon: "shield" },
     ],

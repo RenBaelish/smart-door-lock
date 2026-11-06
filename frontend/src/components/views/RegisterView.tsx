@@ -406,34 +406,6 @@ export default function RegisterView() {
           </div>
 
           <form className="card-body space-y-4" onSubmit={handleSubmit} noValidate>
-            {/* Quick Select from Unregistered Faces */}
-            <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="user-select-preset" className="block text-xs font-bold text-amber-900">
-                  Pilih Pengguna yang Belum Rekam Wajah:
-                </label>
-                <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                  {pendingFaceUsers.length} Menunggu Foto
-                </span>
-              </div>
-              <select
-                id="user-select-preset"
-                className="input text-xs bg-white text-slate-800 font-medium"
-                value={selectedUserId ?? ""}
-                onChange={(e) => handleSelectUser(e.target.value)}
-              >
-                <option value="">-- Pilih Mahasiswa / Dosen yang Belum Rekam Wajah --</option>
-                {pendingFaceUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role === "dosen" ? "Dosen" : "Mhs"} • {u.kelas || "Tanpa Kelas"} • NIM: {u.nim || "-"})
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-amber-800">
-                Memilih nama dari daftar otomatis mengisi seluruh data identitas di bawah ini tanpa perlu mengetik ulang.
-              </p>
-            </div>
-
             {/* Role Selection Tabs */}
             <div>
               <label className="label">Kategori Pengguna *</label>
@@ -442,7 +414,12 @@ export default function RegisterView() {
                   type="button"
                   onClick={() => {
                     setRole("mahasiswa");
-                    if (selectedUserId) setSelectedUserId(null);
+                    setSelectedUserId(null);
+                    setName("");
+                    setNim("");
+                    setKelas("");
+                    setProdi("");
+                    setJurusan("");
                   }}
                   className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-all ${
                     role === "mahasiswa"
@@ -457,7 +434,12 @@ export default function RegisterView() {
                   type="button"
                   onClick={() => {
                     setRole("dosen");
-                    if (selectedUserId) setSelectedUserId(null);
+                    setSelectedUserId(null);
+                    setName("");
+                    setNim("");
+                    setKelas("");
+                    setProdi("");
+                    setJurusan("");
                   }}
                   className={`flex items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-all ${
                     role === "dosen"
@@ -476,127 +458,105 @@ export default function RegisterView() {
               </p>
             </div>
 
-            {/* Dosen GSG Preset Selector */}
-            {role === "dosen" && !selectedUserId && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 space-y-1.5">
-                <label htmlFor="dosen-preset" className="block text-xs font-semibold text-emerald-900">
-                  Pilih Dosen GSG Terdaftar (Atau ketik manual di bawah):
-                </label>
-                <select
-                  id="dosen-preset"
-                  className="input text-xs bg-white text-slate-800 font-medium"
-                  onChange={(e) => {
-                    const selectedName = e.target.value;
-                    if (!selectedName) return;
-                    const found = lecturers.find((l) => l.name === selectedName);
-                    if (found) {
-                      setName(found.name);
-                      setKelas(`Dosen ${found.classes.join(", ")}`);
-                      setProdi("Teknik Informatika dan Komputer");
-                      setJurusan("Teknik Informatika dan Komputer");
-                    }
-                  }}
-                  defaultValue=""
-                >
-                  <option value="">-- Pilih dari {lecturers.length} Dosen GSG (Otomatis Terisi) --</option>
-                  {lecturers.map((l) => (
-                    <option key={l.name} value={l.name}>
-                      {l.name} ({l.subjects.join(", ")})
-                    </option>
-                  ))}
-                </select>
+            {/* Dropdown Selector based on selected category */}
+            {role === "mahasiswa" ? (
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="select-mahasiswa" className="label font-bold text-slate-800">
+                    Pilih Mahasiswa Terdaftar *
+                  </label>
+                  <select
+                    id="select-mahasiswa"
+                    className="input text-xs bg-white text-slate-800 font-medium"
+                    value={selectedUserId ?? ""}
+                    onChange={(e) => handleSelectUser(e.target.value)}
+                  >
+                    <option value="">-- Pilih Mahasiswa yang Akan Direkam Wajahnya --</option>
+                    {users
+                      .filter((u) => (u.role || "").toLowerCase() !== "dosen")
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} (NIM: {u.nim || "-"} • Kelas: {u.kelas || "-"}) {u.has_face ? "✓ [Sudah Ada Wajah]" : "⚠️ [Belum Rekam Wajah]"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {selectedUserId && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 text-xs space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <span className="font-bold text-slate-800">Detail Mahasiswa Terpilih:</span>
+                      <span className="rounded bg-primary-100 px-2 py-0.5 font-semibold text-primary-800">
+                        ID #{selectedUserId}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-slate-700">
+                      <div><span className="text-slate-500">Nama:</span> <strong className="block text-slate-900">{name}</strong></div>
+                      <div><span className="text-slate-500">NIM:</span> <strong className="block font-mono text-slate-900">{nim || "-"}</strong></div>
+                      <div><span className="text-slate-500">Kelas:</span> <strong className="block text-slate-900">{kelas || "-"}</strong></div>
+                      <div><span className="text-slate-500">Program Studi:</span> <strong className="block text-slate-900">{prodi || "-"}</strong></div>
+                    </div>
+                  </div>
+                )}
+
+                {!selectedUserId && (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/70 p-3.5 text-center text-xs text-slate-600">
+                    Silakan pilih mahasiswa dari dropdown di atas. Jika data mahasiswa belum dibuat, tambahkan data terlebih dahulu di halaman{" "}
+                    <Link href="/mahasiswa" className="font-bold text-primary-600 underline">
+                      Data Mahasiswa
+                    </Link>.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="select-dosen" className="label font-bold text-emerald-950">
+                    Pilih Dosen Terdaftar *
+                  </label>
+                  <select
+                    id="select-dosen"
+                    className="input text-xs bg-white text-slate-800 font-medium"
+                    value={selectedUserId ?? ""}
+                    onChange={(e) => handleSelectUser(e.target.value)}
+                  >
+                    <option value="">-- Pilih Dosen yang Akan Direkam Wajahnya --</option>
+                    {users
+                      .filter((u) => (u.role || "").toLowerCase() === "dosen")
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} (NIP: {u.nim || "-"} • Ruang: {u.kelas || "-"}) {u.has_face ? "✓ [Sudah Ada Wajah]" : "⚠️ [Belum Rekam Wajah]"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {selectedUserId && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3.5 text-xs space-y-2">
+                    <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                      <span className="font-bold text-emerald-950">Detail Dosen Terpilih:</span>
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
+                        ID #{selectedUserId}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-slate-700">
+                      <div><span className="text-slate-500">Nama Lengkap:</span> <strong className="block text-slate-900">{name}</strong></div>
+                      <div><span className="text-slate-500">NIP / NIDN:</span> <strong className="block font-mono text-slate-900">{nim || "-"}</strong></div>
+                      <div className="col-span-2"><span className="text-slate-500">Ruangan / Bidang:</span> <strong className="block text-slate-900">{kelas || "-"}</strong></div>
+                    </div>
+                  </div>
+                )}
+
+                {!selectedUserId && (
+                  <div className="rounded-lg border border-dashed border-emerald-300 bg-emerald-50/40 p-3.5 text-center text-xs text-slate-600">
+                    Silakan pilih dosen dari dropdown di atas. Jika data dosen belum dibuat, tambahkan data terlebih dahulu di halaman{" "}
+                    <Link href="/dosen" className="font-bold text-emerald-700 underline">
+                      Data Dosen
+                    </Link>.
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Full Name */}
-            <div>
-              <label htmlFor="register-name" className="label">
-                Nama Lengkap {role === "dosen" ? "(Dosen / Pengajar)" : "(Mahasiswa)"} *
-              </label>
-              <input
-                id="register-name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                maxLength={100}
-                placeholder={role === "dosen" ? "Contoh: Dr. Ir. Budi Rahardjo, M.Kom" : "Contoh: Muhammad Farhan"}
-                className="input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={submitting}
-                required
-              />
-            </div>
-
-            {/* NIM & Kelas */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="register-nim" className="label">
-                  {role === "dosen" ? "NIP / NIDN (Opsional)" : "Nomor Induk Mahasiswa (NIM)"}
-                </label>
-                <input
-                  id="register-nim"
-                  name="nim"
-                  type="text"
-                  maxLength={30}
-                  placeholder={role === "dosen" ? "198503152010121002" : "2207421001"}
-                  className="input"
-                  value={nim}
-                  onChange={(e) => setNim(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="register-kelas" className="label">
-                  {role === "dosen" ? "Ruangan / Bidang" : "Kelas Akademik"}
-                </label>
-                <input
-                  id="register-kelas"
-                  name="kelas"
-                  type="text"
-                  maxLength={30}
-                  placeholder={role === "dosen" ? "GSG210, GSG211" : "Contoh: TMJ 5C, TI 3A, dll"}
-                  className="input font-semibold"
-                  value={kelas}
-                  onChange={(e) => setKelas(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-
-            {/* Program Studi & Jurusan */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="register-prodi" className="label">Program Studi</label>
-                <input
-                  id="register-prodi"
-                  name="prodi"
-                  type="text"
-                  maxLength={100}
-                  placeholder="Contoh: Teknik Informatika / TMJ"
-                  className="input text-xs"
-                  value={prodi}
-                  onChange={(e) => setProdi(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="register-jurusan" className="label">Jurusan / Departemen</label>
-                <input
-                  id="register-jurusan"
-                  name="jurusan"
-                  type="text"
-                  maxLength={100}
-                  placeholder="Contoh: Teknik Elektro / TIK"
-                  className="input text-xs"
-                  value={jurusan}
-                  onChange={(e) => setJurusan(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
-            </div>
 
             {/* Photo Capture Status Indicator */}
             <div>
@@ -619,14 +579,16 @@ export default function RegisterView() {
               id="register-submit"
               type="submit"
               className="btn btn-primary w-full mt-2"
-              disabled={submitting || !captured}
+              disabled={submitting || !captured || !selectedUserId}
             >
               <Icon name="check" className="h-4 w-4" />
               {submitting
                 ? "Menyimpan ke Database..."
-                : selectedUserId
-                ? `Simpan Wajah untuk "${name}"`
-                : "Daftarkan Pengguna & Wajah"}
+                : !selectedUserId
+                ? "Pilih Pengguna di Atas Terlebih Dahulu"
+                : !captured
+                ? "Ambil atau Upload Foto Terlebih Dahulu"
+                : `Simpan Rekaman Wajah untuk "${name}"`}
             </button>
           </form>
         </section>
@@ -746,14 +708,12 @@ export default function RegisterView() {
                       </td>
                       <td className="px-5 py-3">
                         {u.has_face ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                             Wajah Terdaftar
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            Belum Rekam Wajah
+                          <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                            Belum Ada Wajah
                           </span>
                         )}
                       </td>
