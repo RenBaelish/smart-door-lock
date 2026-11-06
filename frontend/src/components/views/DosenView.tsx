@@ -796,17 +796,17 @@ export default function DosenView() {
       <ConfirmDialog
         isOpen={Boolean(userToDelete)}
         title="Hapus Data Dosen"
-        message={
+        description={
           userToDelete
             ? `Apakah Anda yakin ingin menghapus dosen "${userToDelete.name}" beserta data biometrik wajahnya?`
             : ""
         }
-        confirmLabel="Ya, Hapus"
-        cancelLabel="Batal"
-        variant="danger"
-        isLoading={isDeleting}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        tone="danger"
+        loading={isDeleting}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setUserToDelete(null)}
+        onClose={() => setUserToDelete(null)}
       />
     </>
   );

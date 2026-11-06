@@ -954,17 +954,17 @@ export default function MahasiswaView() {
       <ConfirmDialog
         isOpen={Boolean(userToDelete)}
         title="Hapus Data Mahasiswa"
-        message={
+        description={
           userToDelete
             ? `Apakah Anda yakin ingin menghapus mahasiswa "${userToDelete.name}" (NIM: ${userToDelete.nim || "-"}) beserta data biometrik wajahnya?`
             : ""
         }
-        confirmLabel="Ya, Hapus"
-        cancelLabel="Batal"
-        variant="danger"
-        isLoading={isDeleting}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        tone="danger"
+        loading={isDeleting}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setUserToDelete(null)}
+        onClose={() => setUserToDelete(null)}
       />
     </>
   );

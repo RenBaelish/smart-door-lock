@@ -429,17 +429,17 @@ export default function UsersView() {
       <ConfirmDialog
         isOpen={Boolean(userToDelete)}
         title="Hapus Pengguna Admin"
-        message={
+        description={
           userToDelete
             ? `Apakah Anda yakin ingin menghapus "${userToDelete.name}" dari daftar pengelola Dashboard Admin?`
             : ""
         }
-        confirmLabel="Ya, Hapus Admin"
-        cancelLabel="Batal"
-        variant="danger"
-        isLoading={isDeleting}
+        confirmText="Ya, Hapus Admin"
+        cancelText="Batal"
+        tone="danger"
+        loading={isDeleting}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setUserToDelete(null)}
+        onClose={() => setUserToDelete(null)}
       />
     </>
   );

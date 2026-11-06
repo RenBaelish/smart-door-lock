@@ -5,44 +5,65 @@ import Icon, { type IconName } from "@/components/Icon";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
+  onClose?: () => void;
+  onCancel?: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
-  description: string;
+  description?: string;
+  message?: string;
   confirmText?: string;
+  confirmLabel?: string;
   cancelText?: string;
+  cancelLabel?: string;
   tone?: "danger" | "warning" | "primary";
+  variant?: "danger" | "warning" | "primary" | string;
   loading?: boolean;
+  isLoading?: boolean;
   icon?: IconName;
 }
 
 export default function ConfirmDialog({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title,
   description,
-  confirmText = "Konfirmasi",
-  cancelText = "Batal",
-  tone = "danger",
-  loading = false,
+  message,
+  confirmText,
+  confirmLabel,
+  cancelText,
+  cancelLabel,
+  tone,
+  variant,
+  loading,
+  isLoading,
   icon = "trash",
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  const handleClose = onClose || onCancel || (() => {});
+  const resolvedDesc = description ?? message ?? "";
+  const resolvedConfirmText = confirmText ?? confirmLabel ?? "Konfirmasi";
+  const resolvedCancelText = cancelText ?? cancelLabel ?? "Batal";
+  const rawTone = (tone ?? variant ?? "danger") as "danger" | "warning" | "primary";
+  const resolvedTone: "danger" | "warning" | "primary" =
+    rawTone === "warning" || rawTone === "primary" ? rawTone : "danger";
+  const isBusy = loading ?? isLoading ?? false;
 
   // Close on Escape key press
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !loading) {
-        onClose();
+      if (e.key === "Escape" && !isBusy) {
+        handleClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, loading, onClose]);
+  }, [isOpen, isBusy, handleClose]);
 
   if (!isOpen) return null;
 
@@ -59,7 +80,7 @@ export default function ConfirmDialog({
       iconBg: "bg-primary-100 text-neutral-900",
       btnClass: "bg-neutral-950 hover:bg-neutral-800 text-white font-bold",
     },
-  }[tone];
+  }[resolvedTone];
 
   return (
     <div
@@ -68,7 +89,7 @@ export default function ConfirmDialog({
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !loading) onClose();
+        if (e.target === e.currentTarget && !isBusy) handleClose();
       }}
     >
       <div
@@ -84,7 +105,7 @@ export default function ConfirmDialog({
               {title}
             </h3>
             <p className="text-xs text-graphite leading-relaxed whitespace-pre-line">
-              {description}
+              {resolvedDesc}
             </p>
           </div>
         </div>
@@ -93,24 +114,24 @@ export default function ConfirmDialog({
           <button
             type="button"
             className="btn btn-secondary text-xs"
-            onClick={onClose}
-            disabled={loading}
+            onClick={handleClose}
+            disabled={isBusy}
           >
-            {cancelText}
+            {resolvedCancelText}
           </button>
           <button
             type="button"
             className={`btn text-xs shadow-md transition-all ${toneConfig.btnClass}`}
             onClick={onConfirm}
-            disabled={loading}
+            disabled={isBusy}
           >
-            {loading ? (
+            {isBusy ? (
               <span className="flex items-center gap-1.5">
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 Memproses...
               </span>
             ) : (
-              confirmText
+              resolvedConfirmText
             )}
           </button>
         </div>

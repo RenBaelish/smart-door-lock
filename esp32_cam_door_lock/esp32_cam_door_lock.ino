@@ -59,6 +59,7 @@
 #include <HTTPClient.h>
 #include "esp_camera.h"
 #include <ArduinoJson.h>
+#include "esp_wifi.h"
 
 // ----------------------------------------------------------------------------
 // [LCD I2C DINONAKTIFKAN SEMENTARA]
@@ -77,11 +78,11 @@
 // ============================================================================
 // Hidden SSID MikroTik tetap bisa: cukup tulis nama SSID persis (case-sensitive).
 // ESP32 hanya mendukung Wi-Fi 2.4 GHz.
-const char* WIFI_SSID     = "RP1";
-const char* WIFI_PASSWORD = "raffi123";
+const char* WIFI_SSID     = "Door-Net";
+const char* WIFI_PASSWORD = "PasswordDoor";
 
 // IP server backend FastAPI
-const char* SERVER_HOST   = "192.168.129.162";
+const char* SERVER_HOST   = "192.168.10.10";
 const int   SERVER_PORT   = 8000;
 
 // Parameter pengujian
@@ -91,8 +92,8 @@ bool   useFlashOnCapture  = true;   // flash menyala saat capture
 bool   enableUltrasonic   = true;   // deteksi otomatis sensor
 bool   printLiveSensorLog = true;   // log jarak tiap 1 detik
 
-const float TRIGGER_DISTANCE_CM = 8.0f;  // Memicu hitung mundur jika jarak <= 5.0 cm
-const float CANCEL_DISTANCE_CM  = 9.0f;  // Hitung mundur batal jika objek menjauh > 8.0 cm
+const float TRIGGER_DISTANCE_CM = 15.0f;  // Memicu hitung mundur jika jarak <= 5.0 cm
+const float CANCEL_DISTANCE_CM  = 20.0f;  // Hitung mundur batal jika objek menjauh > 8.0 cm
 const int   COUNTDOWN_SECONDS   = 2;
 const int   UNLOCK_DURATION_MS  = 5000;
 
@@ -268,11 +269,10 @@ bool runCountdownBeforeCapture() {
 // ============================================================================
 void captureAndVerifyFace() {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("[ERROR] Wi-Fi terputus! Mencoba reconnect...");
-    WiFi.reconnect();
-    delay(3000);
+    Serial.println("[ERROR] Wi-Fi terputus! Mencoba menghubungkan kembali...");
+    connectToWiFiNetwork();
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("[ERROR] Masih belum terhubung. Ketik 'w' untuk konek ulang.");
+      Serial.println("[ERROR] Masih belum terhubung ke Wi-Fi. Ketik 'w' untuk konek ulang.");
       buzzerCondition5_NoFace();
       return;
     }
@@ -426,30 +426,70 @@ void captureAndVerifyFace() {
 }
 
 // ============================================================================
-// 8. WI-FI (MENDUKUNG HIDDEN SSID)
+// 8. WI-FI (MENDUKUNG HIDDEN SSID & VIRTUAL AP MIKROTIK)
 // ============================================================================
 void connectToWiFiNetwork() {
-  Serial.printf("\n[WI-FI] Menghubungkan ke SSID '%s'...\n", WIFI_SSID);
+  Serial.printf("\n[WI-FI] Menghubungkan ke SSID '%s' (Mendukung Hidden SSID MikroTik)...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(true);
-  delay(150);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD); // ESP32 otomatis probe SSID tersembunyi
+  delay(200);
+
+  // 1. Konfigurasi ESP-IDF Wi-Fi STA agar aktif memindai semua kanal 2.4 GHz
+  wifi_config_t conf;
+  if (esp_wifi_get_config(WIFI_IF_STA, &conf) == ESP_OK) {
+    conf.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+    conf.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
+    esp_wifi_set_config(WIFI_IF_STA, &conf);
+  }
+
+  // 2. Active Probe Scan untuk memancing respons beacon dari Hidden SSID MikroTik
+  Serial.println("[WI-FI] Memindai kanal 2.4 GHz untuk mendeteksi AP MikroTik...");
+  int n = WiFi.scanNetworks(false, true); // true = active probe scan for hidden networks
+  int targetChannel = 0;
+  uint8_t targetBSSID[6];
+  bool found = false;
+
+  for (int i = 0; i < n; i++) {
+    if (WiFi.SSID(i) == WIFI_SSID) {
+      targetChannel = WiFi.channel(i);
+      memcpy(targetBSSID, WiFi.BSSID(i), 6);
+      found = true;
+      Serial.printf("  -> Ditemukan AP '%s' [Kanal %d, BSSID: %s, Sinyal: %d dBm]\n",
+                    WIFI_SSID, targetChannel, WiFi.BSSIDstr(i).c_str(), WiFi.RSSI(i));
+      break;
+    }
+  }
+
+  if (found) {
+    Serial.println("  -> Mengunci koneksi langsung ke Channel & BSSID AP MikroTik...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD, targetChannel, targetBSSID);
+  } else {
+    Serial.println("  -> Mengirim Probe Request langsung ke AP MikroTik...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  }
 
   int retry = 0;
-  while (WiFi.status() != WL_CONNECTED && retry < 30) { // maks 15 detik
+  while (WiFi.status() != WL_CONNECTED && retry < 40) { // Timeout 20 detik
     delay(500);
     Serial.print(".");
     retry++;
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[WI-FI TERHUBUNG]");
+    Serial.println("\n[WI-FI TERHUBUNG KE MIKROTIK]");
     Serial.printf("  IP ESP32-CAM : %s\n", WiFi.localIP().toString().c_str());
     Serial.printf("  Gateway      : %s\n", WiFi.gatewayIP().toString().c_str());
-    Serial.printf("  RSSI         : %d dBm\n", WiFi.RSSI());
+    Serial.printf("  Subnet Mask  : %s\n", WiFi.subnetMask().toString().c_str());
+    Serial.printf("  RSSI Sinyal  : %d dBm\n", WiFi.RSSI());
   } else {
-    Serial.println("\n[WI-FI GAGAL] Cek SSID/password, pastikan 2.4 GHz. Ketik 'w' untuk coba lagi.");
-    Serial.println("  (Sensor, LED & buzzer tetap bisa dites tanpa Wi-Fi.)");
+    Serial.println("\n[WI-FI GAGAL] Tidak dapat terhubung ke MikroTik!");
+    Serial.printf("  Status Eror Kode: %d\n", WiFi.status());
+    Serial.println("  Panduan Cek MikroTik:");
+    Serial.println("   1. Security Profile: WPA2-PSK saja (Centang AES-CCM, UNCHECK TKIP/WPA1/WPA3).");
+    Serial.println("   2. Virtual AP: Pastikan 'Default Authentication' tercentang (YES).");
+    Serial.println("   3. Master wlan1: Pastikan Channel Width = 20MHz (bukan 40MHz).");
+    Serial.println("   4. Virtual AP: Pastikan DHCP Server aktif pada interface V-AP.");
+    Serial.println("   5. Buka menu Log di Winbox untuk melihat alasan disconnect.");
   }
 }
 
