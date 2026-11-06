@@ -59,6 +59,8 @@ case "$ACTION" in
     sudo docker compose logs -f db
     ;;
   build-frontend)
+    echo "Menyiapkan environment frontend (relative API path via Nginx)..."
+    echo "NEXT_PUBLIC_API_URL=" > frontend/.env.local
     echo "Membangun (rebuild) bundle frontend Next.js..."
     cd frontend
     export NODE_OPTIONS="--max-old-space-size=2048"
