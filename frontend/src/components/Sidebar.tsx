@@ -201,7 +201,7 @@ export default function Sidebar() {
         {/* Footer: API status */}
         <div className={`border-t border-neutral-800 ${collapsed ? "px-0 py-4" : "p-4"}`}>
           {collapsed ? (
-            <div className="flex justify-center" title={`${api.label} - ${API_BASE}`}>
+            <div className="flex justify-center" title={`${api.label} - ${API_BASE || "Origin Host"}`}>
               <span className={`h-2.5 w-2.5 rounded-full ${api.dot}`} />
             </div>
           ) : (
@@ -210,7 +210,7 @@ export default function Sidebar() {
                 <span className={`h-2 w-2 rounded-full ${api.dot}`} />
                 <span className="font-medium">{api.label}</span>
               </div>
-              <div className="mt-1 truncate font-mono text-[10px] text-neutral-500">{API_BASE}</div>
+              <div className="mt-1 truncate font-mono text-[10px] text-neutral-500">{API_BASE || "/api (Nginx Proxy)"}</div>
             </div>
           )}
         </div>

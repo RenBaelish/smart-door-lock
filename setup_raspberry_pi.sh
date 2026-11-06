@@ -166,9 +166,9 @@ if [ "$START_STEP" -le 7 ]; then
   echo -e "${GREEN}[7/9] Menyiapkan Frontend Next.js...${NC}"
   cd "$PROJECT_DIR/frontend"
 
-  # Konfigurasi .env.local untuk environment Raspberry Pi lokal
+  # Konfigurasi .env.local untuk environment Raspberry Pi (kosongkan agar menggunakan relative path via Nginx)
   cat <<EOF > .env.local
-NEXT_PUBLIC_API_URL=http://localhost/api
+NEXT_PUBLIC_API_URL=
 EOF
 
   echo "Menginstall dependensi NPM Frontend..."

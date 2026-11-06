@@ -1,4 +1,12 @@
-export const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+export const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL !== undefined
+    ? process.env.NEXT_PUBLIC_API_URL
+    : process.env.NODE_ENV === "production"
+    ? ""
+    : "http://localhost:8000"
+)
+  .replace(/\/$/, "")
+  .replace(/\/api$/, "");
 
 export type LogStatus =
   | "success"
@@ -156,7 +164,9 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...init });
+  const cleanBase = API_BASE.replace(/\/api$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const res = await fetch(`${cleanBase}${normalizedPath}`, { cache: "no-store", ...init });
 
   if (!res.ok) {
     let message = `Request failed with status ${res.status}`;

@@ -58,8 +58,17 @@ case "$ACTION" in
     echo "Menampilkan live logs PostgreSQL Docker (Ctrl+C untuk keluar)..."
     sudo docker compose logs -f db
     ;;
+  build-frontend)
+    echo "Membangun (rebuild) bundle frontend Next.js..."
+    cd frontend
+    export NODE_OPTIONS="--max-old-space-size=2048"
+    npm run build
+    cd ..
+    sudo systemctl restart smartclassroom-frontend
+    echo "Frontend berhasil di-rebuild dan direstart!"
+    ;;
   *)
-    echo "Penggunaan: ./manage.sh {status|restart|start|stop|logs-backend|logs-frontend|logs-db}"
+    echo "Penggunaan: ./manage.sh {status|restart|start|stop|build-frontend|logs-backend|logs-frontend|logs-db}"
     exit 1
     ;;
 esac
